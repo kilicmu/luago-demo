@@ -6,13 +6,14 @@ type binaryChunk struct {
 	mainFunc *Prototype // 主函数原型
 }
 
-type header struct { // 30 bytes
+type header struct { // about 30 bytes
 	signature       [4]byte // 魔数 chuck签名
 	version         byte    // 版本号 大版本 * 16 + 小版本 => 5.4.3 => 5 * 16 + 4 => 0x54
 	format          byte    // 格式号：检验虚拟机匹配
 	luaData         [6]byte // LuaC_DATA: 进一步校验 0x 19 93 0D 0A 1993 + 回车（0x0D） + 换行（0x0A）
 	cintSize        byte    // cint 长度
-	instructionSize byte    // size_t 长度
+	csizetSize      byte    // size_t 长度
+	instructionSize byte    //
 	luaIntegerSize  byte    // lua int 长度
 	luaNumberSize   byte    // lua number长度
 	luacInt         int64   // 存储 lua 整数值 0x5678 用于定位主机内存的大小端 0x78 56 => 小端 0x56 78 => 大端
@@ -42,7 +43,7 @@ const (
 	TAG_LONG_STR  = 0x14
 )
 
-type UpValue struct {
+type Upvalue struct {
 	Instack byte
 	Idx     byte
 }
@@ -54,7 +55,7 @@ type LocVar struct {
 }
 
 type Prototype struct {
-	Source          string // 源文件名 debug  这个字段非主函数五值
+	Source          string // 源文件名 debug  这个字段非主函数无值
 	LineDefined     uint32 //
 	LastLineDefined uint32
 	NumberParams    byte     // 固定参数个数
@@ -71,9 +72,19 @@ type Prototype struct {
 		0x14 => string 长字符串
 	*/
 	Constants    []interface{}
-	UpValues     []UpValue // upvalue表
+	Upvalues     []Upvalue // upvalue表
 	Protos       []*Prototype
 	LineInfo     []uint32 // 行号表
 	LocVars      []LocVar // 局部变量表
 	UpvalueNames []string // Upvalue名表 与 Upvalue表中元素一一对应记录每个Upvalue在源码的名字
+}
+
+/*
+resolve binary lua chunk
+*/
+func Undump(data []byte) *Prototype {
+	reader := &reader{data}
+	reader.checkHeader()
+	reader.readByte()
+	return reader.readProto("")
 }
